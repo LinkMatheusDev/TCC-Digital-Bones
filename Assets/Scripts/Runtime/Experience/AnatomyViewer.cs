@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR;
@@ -11,28 +12,40 @@ public sealed class AnatomyViewer : MonoBehaviour
     [SerializeField] private Text detailsText;
     [SerializeField] private Text modeText;
 
-    private AnatomicalPart[] parts;
+    private AnatomicalPart[] parts = new AnatomicalPart[0];
     private AnatomicalPart selectedPart;
+
     private InputDevice rightController;
     private InputDevice leftController;
     private InputDevice headDevice;
+
     private Vector3 initialScale;
     private Quaternion initialRotation;
     private Vector3 previousMousePosition;
+
+    private float zoomFactor = 1f;
+
     private bool dissected;
     private bool isolated;
     private bool previousTrigger;
     private bool previousRightPrimary;
     private bool previousLeftPrimary;
 
-    public void Configure(Transform root, Transform origin, Camera camera, Text selectedText, Text description, Text mode)
+    public void Configure(
+        Transform root,
+        Transform origin,
+        Camera camera,
+        Text selectedText,
+        Text description,
+        Text mode)
     {
-        modelRoot = root;
         trackingOrigin = origin;
         viewerCamera = camera;
         selectedPartText = selectedText;
         detailsText = description;
         modeText = mode;
+
+        SetModelRoot(root);
     }
 
     private void Start()
@@ -42,19 +55,51 @@ public sealed class AnatomyViewer : MonoBehaviour
             viewerCamera = Camera.main;
         }
 
-        parts = modelRoot != null ? modelRoot.GetComponentsInChildren<AnatomicalPart>() : new AnatomicalPart[0];
+        if (modelRoot != null)
+        {
+            SetModelRoot(modelRoot);
+        }
+        else
+        {
+            RefreshInformation();
+            RefreshModeText();
+        }
+    }
+
+    // Recebe o container que contém o modelo carregado.
+    public void SetModelRoot(Transform root)
+    {
+        if (selectedPart != null)
+        {
+            selectedPart.SetSelected(false);
+        }
+
+        modelRoot = root;
+        selectedPart = null;
+
+        parts = modelRoot != null
+            ? modelRoot.GetComponentsInChildren<AnatomicalPart>(true)
+            : new AnatomicalPart[0];
+
         if (modelRoot != null)
         {
             initialScale = modelRoot.localScale;
             initialRotation = modelRoot.localRotation;
         }
 
+        zoomFactor = 1f;
+        dissected = false;
+        isolated = false;
+
         if (parts.Length > 0)
         {
             SelectPart(parts[0]);
         }
-
-        RefreshModeText();
+        else
+        {
+            RefreshInformation();
+            RefreshModeText();
+        }
     }
 
     private void Update()
@@ -72,8 +117,12 @@ public sealed class AnatomyViewer : MonoBehaviour
         }
 
         if (viewerCamera != null &&
-            headDevice.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 headPosition) &&
-            headDevice.TryGetFeatureValue(CommonUsages.deviceRotation, out Quaternion headRotation))
+            headDevice.TryGetFeatureValue(
+                CommonUsages.devicePosition,
+                out Vector3 headPosition) &&
+            headDevice.TryGetFeatureValue(
+                CommonUsages.deviceRotation,
+                out Quaternion headRotation))
         {
             viewerCamera.transform.localPosition = headPosition;
             viewerCamera.transform.localRotation = headRotation;
@@ -83,15 +132,17 @@ public sealed class AnatomyViewer : MonoBehaviour
     private void HandleDesktopInput()
     {
         if (viewerCamera == null || modelRoot == null)
-        {
             return;
-        }
 
+        // Selecionar uma estrutura com o botão esquerdo.
         if (Input.GetMouseButtonDown(0))
         {
-            SelectFromRay(viewerCamera.ScreenPointToRay(Input.mousePosition));
+            SelectFromRay(
+                viewerCamera.ScreenPointToRay(Input.mousePosition)
+            );
         }
 
+        // Rotacionar segurando o botão direito.
         if (Input.GetMouseButtonDown(1))
         {
             previousMousePosition = Input.mousePosition;
@@ -99,16 +150,43 @@ public sealed class AnatomyViewer : MonoBehaviour
 
         if (Input.GetMouseButton(1))
         {
-            Vector3 mouseDelta = Input.mousePosition - previousMousePosition;
-            modelRoot.Rotate(Vector3.up, -mouseDelta.x * 0.35f, Space.World);
-            modelRoot.Rotate(Vector3.right, mouseDelta.y * 0.35f, Space.Self);
+            Vector3 mouseDelta =
+                Input.mousePosition - previousMousePosition;
+
+            modelRoot.Rotate(
+                Vector3.up,
+                -mouseDelta.x * 0.35f,
+                Space.World
+            );
+
+            modelRoot.Rotate(
+                Vector3.right,
+                mouseDelta.y * 0.35f,
+                Space.Self
+            );
+
             previousMousePosition = Input.mousePosition;
         }
 
+        // Zoom pela roda do mouse.
         float scroll = Input.mouseScrollDelta.y;
+
         if (Mathf.Abs(scroll) > 0.01f)
         {
-            ScaleModel(scroll * 0.08f);
+            ScaleModel(scroll * 0.12f);
+        }
+
+        // Teclas alternativas para testar o zoom.
+        if (Input.GetKeyDown(KeyCode.Equals) ||
+            Input.GetKeyDown(KeyCode.KeypadPlus))
+        {
+            ScaleModel(0.15f);
+        }
+
+        if (Input.GetKeyDown(KeyCode.Minus) ||
+            Input.GetKeyDown(KeyCode.KeypadMinus))
+        {
+            ScaleModel(-0.15f);
         }
 
         if (Input.GetKeyDown(KeyCode.Space))
@@ -128,7 +206,8 @@ public sealed class AnatomyViewer : MonoBehaviour
 
         for (int index = 0; index < parts.Length && index < 3; index++)
         {
-            if (Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + index)))
+            if (Input.GetKeyDown(
+                (KeyCode)((int)KeyCode.Alpha1 + index)))
             {
                 SelectPart(parts[index]);
             }
@@ -139,50 +218,97 @@ public sealed class AnatomyViewer : MonoBehaviour
     {
         if (!rightController.isValid)
         {
-            rightController = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
+            rightController =
+                InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
         }
 
         if (!leftController.isValid)
         {
-            leftController = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+            leftController =
+                InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
         }
 
-        bool triggerPressed = rightController.TryGetFeatureValue(CommonUsages.triggerButton, out bool triggerButton) && triggerButton;
-        if (triggerPressed && !previousTrigger && TryGetControllerRay(rightController, out Ray controllerRay))
+        bool triggerPressed =
+            rightController.TryGetFeatureValue(
+                CommonUsages.triggerButton,
+                out bool triggerButton) && triggerButton;
+
+        if (triggerPressed && !previousTrigger &&
+            TryGetControllerRay(rightController, out Ray controllerRay))
         {
             SelectFromRay(controllerRay);
         }
+
         previousTrigger = triggerPressed;
 
-        bool rightPrimaryPressed = rightController.TryGetFeatureValue(CommonUsages.primaryButton, out bool rightPrimary) && rightPrimary;
+        bool rightPrimaryPressed =
+            rightController.TryGetFeatureValue(
+                CommonUsages.primaryButton,
+                out bool rightPrimary) && rightPrimary;
+
         if (rightPrimaryPressed && !previousRightPrimary)
         {
             ToggleDissection();
         }
+
         previousRightPrimary = rightPrimaryPressed;
 
-        bool leftPrimaryPressed = leftController.TryGetFeatureValue(CommonUsages.primaryButton, out bool leftPrimary) && leftPrimary;
+        bool leftPrimaryPressed =
+            leftController.TryGetFeatureValue(
+                CommonUsages.primaryButton,
+                out bool leftPrimary) && leftPrimary;
+
         if (leftPrimaryPressed && !previousLeftPrimary)
         {
             ToggleIsolation();
         }
+
         previousLeftPrimary = leftPrimaryPressed;
 
-        if (leftController.TryGetFeatureValue(CommonUsages.primary2DAxis, out Vector2 stick) && stick.sqrMagnitude > 0.04f && modelRoot != null)
+        if (modelRoot != null &&
+            leftController.TryGetFeatureValue(
+                CommonUsages.primary2DAxis,
+                out Vector2 stick) &&
+            stick.sqrMagnitude > 0.04f)
         {
-            modelRoot.Rotate(Vector3.up, -stick.x * 90f * Time.deltaTime, Space.World);
-            modelRoot.Rotate(Vector3.right, stick.y * 90f * Time.deltaTime, Space.Self);
+            modelRoot.Rotate(
+                Vector3.up,
+                -stick.x * 90f * Time.deltaTime,
+                Space.World
+            );
+
+            modelRoot.Rotate(
+                Vector3.right,
+                stick.y * 90f * Time.deltaTime,
+                Space.Self
+            );
         }
     }
 
-    private bool TryGetControllerRay(InputDevice controller, out Ray controllerRay)
+    private bool TryGetControllerRay(
+        InputDevice controller,
+        out Ray controllerRay)
     {
-        if (controller.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 position) &&
-            controller.TryGetFeatureValue(CommonUsages.deviceRotation, out Quaternion rotation))
+        if (controller.TryGetFeatureValue(
+                CommonUsages.devicePosition,
+                out Vector3 position) &&
+            controller.TryGetFeatureValue(
+                CommonUsages.deviceRotation,
+                out Quaternion rotation))
         {
-            Vector3 worldPosition = trackingOrigin != null ? trackingOrigin.TransformPoint(position) : position;
-            Quaternion worldRotation = trackingOrigin != null ? trackingOrigin.rotation * rotation : rotation;
-            controllerRay = new Ray(worldPosition, worldRotation * Vector3.forward);
+            Vector3 worldPosition = trackingOrigin != null
+                ? trackingOrigin.TransformPoint(position)
+                : position;
+
+            Quaternion worldRotation = trackingOrigin != null
+                ? trackingOrigin.rotation * rotation
+                : rotation;
+
+            controllerRay = new Ray(
+                worldPosition,
+                worldRotation * Vector3.forward
+            );
+
             return true;
         }
 
@@ -192,9 +318,15 @@ public sealed class AnatomyViewer : MonoBehaviour
 
     private void SelectFromRay(Ray ray)
     {
-        if (Physics.Raycast(ray, out RaycastHit hit, 10f) && hit.collider.GetComponentInParent<AnatomicalPart>() is AnatomicalPart part)
+        if (Physics.Raycast(ray, out RaycastHit hit, 10f))
         {
-            SelectPart(part);
+            AnatomicalPart part =
+                hit.collider.GetComponentInParent<AnatomicalPart>();
+
+            if (part != null)
+            {
+                SelectPart(part);
+            }
         }
     }
 
@@ -206,6 +338,7 @@ public sealed class AnatomyViewer : MonoBehaviour
         }
 
         selectedPart = part;
+
         if (selectedPart != null)
         {
             selectedPart.SetSelected(true);
@@ -218,6 +351,7 @@ public sealed class AnatomyViewer : MonoBehaviour
     private void ToggleDissection()
     {
         dissected = !dissected;
+
         foreach (AnatomicalPart part in parts)
         {
             part.SetDissected(dissected);
@@ -244,18 +378,23 @@ public sealed class AnatomyViewer : MonoBehaviour
     private void ScaleModel(float amount)
     {
         if (modelRoot == null)
-        {
             return;
-        }
 
-        float scale = Mathf.Clamp(modelRoot.localScale.x + amount, 0.35f, 2.5f);
-        modelRoot.localScale = Vector3.one * scale;
+        zoomFactor = Mathf.Clamp(
+            zoomFactor + amount,
+            0.25f,
+            4f
+        );
+
+        modelRoot.localScale = initialScale * zoomFactor;
     }
 
     private void ResetView()
     {
         dissected = false;
         isolated = false;
+        zoomFactor = 1f;
+
         if (modelRoot != null)
         {
             modelRoot.localScale = initialScale;
@@ -268,6 +407,7 @@ public sealed class AnatomyViewer : MonoBehaviour
             part.SetVisible(true);
         }
 
+        RefreshInformation();
         RefreshModeText();
     }
 
@@ -275,12 +415,16 @@ public sealed class AnatomyViewer : MonoBehaviour
     {
         if (selectedPartText != null)
         {
-            selectedPartText.text = selectedPart != null ? selectedPart.DisplayName : "Nenhuma estrutura selecionada";
+            selectedPartText.text = selectedPart != null
+                ? selectedPart.DisplayName
+                : "Nenhuma estrutura selecionada";
         }
 
         if (detailsText != null)
         {
-            detailsText.text = selectedPart != null ? selectedPart.Details : "Aponte para uma estrutura e pressione o gatilho.";
+            detailsText.text = selectedPart != null
+                ? selectedPart.Details
+                : "Aponte para uma estrutura e pressione o gatilho.";
         }
     }
 
@@ -288,9 +432,16 @@ public sealed class AnatomyViewer : MonoBehaviour
     {
         if (modeText != null)
         {
-            string dissectionLabel = dissected ? "Disseccao: ativa" : "Disseccao: inativa";
-            string isolationLabel = isolated ? "Isolamento: ativo" : "Isolamento: inativo";
-            modeText.text = $"{dissectionLabel}  |  {isolationLabel}";
+            string dissectionLabel = dissected
+                ? "Disseccao: ativa"
+                : "Disseccao: inativa";
+
+            string isolationLabel = isolated
+                ? "Isolamento: ativo"
+                : "Isolamento: inativo";
+
+            modeText.text =
+                $"{dissectionLabel}  |  {isolationLabel}";
         }
     }
 }

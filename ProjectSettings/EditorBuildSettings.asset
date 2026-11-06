@@ -9,5 +9,6 @@ EditorBuildSettings:
     path: Assets/Scenes/AnatomyLab.unity
     guid: f492ad313b830114a8e6a2da48d5eb77
   m_configObjects:
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 88c7a779a9d02584b887a08a40929cda, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: e443f4e3da630f14f969c1cdbd75e1a4, type: 2}
   m_UseUCBPForAssetBundles: 0
