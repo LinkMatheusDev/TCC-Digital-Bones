@@ -24,6 +24,11 @@ public sealed class AnatomyViewer : MonoBehaviour
     private bool previousTrigger;
     private bool previousRightPrimary;
     private bool previousLeftPrimary;
+    private Vector3 initialPosition;
+
+    public Transform ModelRoot => modelRoot;
+    public Transform TrackingOrigin => trackingOrigin;
+    public Camera ViewerCamera => viewerCamera;
 
     public void Configure(Transform root, Transform origin, Camera camera, Text selectedText, Text description, Text mode)
     {
@@ -47,6 +52,7 @@ public sealed class AnatomyViewer : MonoBehaviour
         {
             initialScale = modelRoot.localScale;
             initialRotation = modelRoot.localRotation;
+            initialPosition = modelRoot.localPosition;
         }
 
         if (parts.Length > 0)
@@ -252,7 +258,7 @@ public sealed class AnatomyViewer : MonoBehaviour
         modelRoot.localScale = Vector3.one * scale;
     }
 
-    private void ResetView()
+    public void ResetView()
     {
         dissected = false;
         isolated = false;
@@ -260,6 +266,7 @@ public sealed class AnatomyViewer : MonoBehaviour
         {
             modelRoot.localScale = initialScale;
             modelRoot.localRotation = initialRotation;
+            modelRoot.localPosition = initialPosition;
         }
 
         foreach (AnatomicalPart part in parts)

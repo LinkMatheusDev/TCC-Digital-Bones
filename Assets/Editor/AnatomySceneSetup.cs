@@ -45,16 +45,50 @@ public static class AnatomySceneSetup
         CreatePart(modelRoot.transform, "Diafise", "Corpo do osso longo. Use esta estrutura para apresentar a regiao cortical e relacionar a anatomia com o planejamento de procedimentos.", Vector3.zero, new Vector3(0.16f, 0.63f, 0.16f), boneMaterial, Vector3.zero, PrimitiveType.Capsule);
         CreatePart(modelRoot.transform, "Epifise distal", "Extremidade inferior do osso longo. A malha placeholder pode ser trocada por um arquivo exportado do fluxo de segmentacao DICOM.", new Vector3(0f, -0.54f, 0f), new Vector3(0.34f, 0.25f, 0.33f), boneMaterial, new Vector3(0f, -0.18f, 0f));
 
-        CreateHud(cameraObject.transform, out Text selectedText, out Text detailsText, out Text modeText);
+        Canvas hudCanvas = CreateHud(cameraObject.transform, out Text selectedText, out Text detailsText, out Text modeText);
         GameObject viewerObject = new GameObject("Anatomy Viewer");
         AnatomyViewer viewer = viewerObject.AddComponent<AnatomyViewer>();
         viewer.Configure(modelRoot.transform, trackingOrigin.transform, camera, selectedText, detailsText, modeText);
+
+        HandGestureController handGestures = viewerObject.AddComponent<HandGestureController>();
+        handGestures.Configure(viewer, CreateGestureStatusText(hudCanvas.transform));
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
         AssetDatabase.SaveAssets();
         EditorSceneManager.OpenScene(ScenePath);
         Debug.Log("Digital Bones demo scene created at " + ScenePath);
+    }
+
+    [MenuItem("Digital Bones/Add Hand Gestures To Open Scene")]
+    public static void AddHandGesturesToOpenScene()
+    {
+        AnatomyViewer viewer = UnityEngine.Object.FindFirstObjectByType<AnatomyViewer>();
+        if (viewer == null)
+        {
+            EditorUtility.DisplayDialog("Digital Bones", "Nenhum AnatomyViewer encontrado na cena aberta. Abra Assets/Scenes/AnatomyLab.unity.", "OK");
+            return;
+        }
+
+        if (viewer.GetComponent<HandGestureController>() != null)
+        {
+            EditorUtility.DisplayDialog("Digital Bones", "A cena já possui o HandGestureController.", "OK");
+            return;
+        }
+
+        Text statusText = null;
+        GameObject hud = GameObject.Find("Anatomy HUD");
+        if (hud != null)
+        {
+            statusText = CreateGestureStatusText(hud.transform);
+            Undo.RegisterCreatedObjectUndo(statusText.gameObject, "Add Gesture Status Text");
+        }
+
+        HandGestureController controller = Undo.AddComponent<HandGestureController>(viewer.gameObject);
+        controller.Configure(viewer, statusText);
+        EditorUtility.SetDirty(controller);
+        EditorSceneManager.MarkSceneDirty(viewer.gameObject.scene);
+        Debug.Log("HandGestureController adicionado. Salve a cena (Ctrl+S).");
     }
 
     [MenuItem("Digital Bones/Play Demo Scene")]
@@ -136,6 +170,13 @@ public static class AnatomySceneSetup
         CreateText(panelObject.transform, "View Modes", font, 15, FontStyle.Italic, new Vector2(18f, -184f), new Vector2(404f, 28f), TextAnchor.MiddleLeft, out modeText);
         CreateText(panelObject.transform, "Trigger: select  |  A: dissection  |  X: isolate\nMouse: select / rotate / zoom  |  Space: dissection  |  I: isolate  |  R: reset", font, 13, FontStyle.Normal, new Vector2(18f, -214f), new Vector2(404f, 40f), TextAnchor.UpperLeft, out _);
         return canvas;
+    }
+
+    private static Text CreateGestureStatusText(Transform hudCanvas)
+    {
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        CreateText(hudCanvas, "Gesture Status", font, 16, FontStyle.Bold, new Vector2(24f, -292f), new Vector2(560f, 64f), TextAnchor.UpperLeft, out Text statusText);
+        return statusText;
     }
 
     private static void CreateText(Transform parent, string initialText, Font font, int fontSize, FontStyle fontStyle, Vector2 position, Vector2 size, TextAnchor alignment, out Text text)
