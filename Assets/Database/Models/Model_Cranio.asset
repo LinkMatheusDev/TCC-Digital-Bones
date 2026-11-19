@@ -15,8 +15,8 @@ MonoBehaviour:
   modelId: cranio
   displayName: "Cr\xE2nio"
   species: 
-  bone: 
-  description: 
+  bone: Crânio
+  description: "Modelo 3D do crânio. Em geral, o crânio forma o esqueleto da cabeça e protege o encéfalo. A espécie deste espécime não está cadastrada."
   modelPrefab: {fileID: 3467799575086292625, guid: 8c1136da53e221f4ab2d5b564c101cc4, type: 3}
   physicalDimensionsMillimeters: {x: 0, y: 0, z: 0}
   sourceStudyId: 

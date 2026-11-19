@@ -484,7 +484,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b643455f5d328c7419ff7b1c6a45bcaa, type: 2}
   modelContainer: {fileID: 2134934914}
   viewer: {fileID: 255711812}
-  selectedModelId: 
 --- !u!1 &255711811
 GameObject:
   m_ObjectHideFlags: 0
@@ -1881,7 +1880,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1378398901
 Transform:
   m_ObjectHideFlags: 0
@@ -2822,7 +2821,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b643455f5d328c7419ff7b1c6a45bcaa, type: 2}
   modelContainer: {fileID: 2134934914}
   viewer: {fileID: 255711812}
-  selectedModelId: 
 --- !u!4 &2134934914
 Transform:
   m_ObjectHideFlags: 0

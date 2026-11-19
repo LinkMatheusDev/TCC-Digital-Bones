@@ -1,5 +1,6 @@
 
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.XR;
 
@@ -30,6 +31,18 @@ public sealed class AnatomyViewer : MonoBehaviour
     private bool previousTrigger;
     private bool previousRightPrimary;
     private bool previousLeftPrimary;
+    private AnatomyHudController hudController;
+
+    public Camera ViewerCamera => viewerCamera;
+
+    private void Awake()
+    {
+        hudController = GetComponent<AnatomyHudController>();
+        if (hudController == null)
+        {
+            hudController = gameObject.AddComponent<AnatomyHudController>();
+        }
+    }
 
     public void Configure(
         Transform root,
@@ -137,9 +150,13 @@ public sealed class AnatomyViewer : MonoBehaviour
         // Selecionar uma estrutura com o botão esquerdo.
         if (Input.GetMouseButtonDown(0))
         {
-            SelectFromRay(
-                viewerCamera.ScreenPointToRay(Input.mousePosition)
-            );
+            if (EventSystem.current == null ||
+                !EventSystem.current.IsPointerOverGameObject())
+            {
+                SelectFromRay(
+                    viewerCamera.ScreenPointToRay(Input.mousePosition)
+                );
+            }
         }
 
         // Rotacionar segurando o botão direito.
@@ -236,7 +253,11 @@ public sealed class AnatomyViewer : MonoBehaviour
         if (triggerPressed && !previousTrigger &&
             TryGetControllerRay(rightController, out Ray controllerRay))
         {
-            SelectFromRay(controllerRay);
+            if (hudController == null ||
+                !hudController.TryHandleControllerRay(controllerRay))
+            {
+                SelectFromRay(controllerRay);
+            }
         }
 
         previousTrigger = triggerPressed;

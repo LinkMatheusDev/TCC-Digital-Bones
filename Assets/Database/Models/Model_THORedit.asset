@@ -15,8 +15,8 @@ MonoBehaviour:
   modelId: thor_edit
   displayName: THORedit
   species: 
-  bone: 
-  description: 
+  bone: Não documentada
+  description: "A estrutura anatômica e a espécie deste modelo ainda não estão documentadas no catálogo."
   modelPrefab: {fileID: 2108923973834349104, guid: b901dec4b340def41a440622b1af55b0, type: 3}
   physicalDimensionsMillimeters: {x: 0, y: 0, z: 0}
   sourceStudyId: 

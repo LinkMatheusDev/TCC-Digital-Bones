@@ -15,8 +15,8 @@ MonoBehaviour:
   modelId: tibia_thor_1
   displayName: TibiaTHOR1
   species: 
-  bone: 
-  description: 
+  bone: Tíbia
+  description: "Modelo 3D da tíbia. Este osso longo do membro pélvico participa das articulações do joelho e do tarso. A espécie deste espécime não está cadastrada."
   modelPrefab: {fileID: 7075749369765388161, guid: ce5a0076e4e0dfc44977f216ca621f87, type: 3}
   physicalDimensionsMillimeters: {x: 0, y: 0, z: 0}
   sourceStudyId: 

@@ -8,9 +8,10 @@ public class AnatomyModelLoader : MonoBehaviour
     [SerializeField] private AnatomyModelDefinition[] catalog;
     [SerializeField] private Transform modelContainer;
     [SerializeField] private AnatomyViewer viewer;
-    [SerializeField] private string selectedModelId = "cranio";
 
     private GameObject currentModel;
+
+    public AnatomyModelDefinition[] Catalog => catalog;
 
     private void Start()
     {
@@ -20,11 +21,14 @@ public class AnatomyModelLoader : MonoBehaviour
         {
             viewer = FindObjectOfType<AnatomyViewer>();
         }
-
-        LoadModel(selectedModelId);
     }
 
     public void LoadModel(string modelId)
+    {
+        TryLoadModel(modelId);
+    }
+
+    public bool TryLoadModel(string modelId)
     {
         AnatomyModelRecord record =
             AnatomyDatabase.GetModelById(modelId);
@@ -34,11 +38,11 @@ public class AnatomyModelLoader : MonoBehaviour
             Debug.LogError(
                 "Modelo não encontrado no banco: " + modelId
             );
-            return;
+            return false;
         }
 
         AnatomyModelDefinition definition = Array.Find(
-            catalog,
+            catalog ?? Array.Empty<AnatomyModelDefinition>(),
             item => item != null &&
                     item.ModelId == record.ModelId
         );
@@ -48,7 +52,7 @@ public class AnatomyModelLoader : MonoBehaviour
             Debug.LogError(
                 "Prefab não encontrado para: " + record.DisplayName
             );
-            return;
+            return false;
         }
 
         if (modelContainer == null)
@@ -56,7 +60,7 @@ public class AnatomyModelLoader : MonoBehaviour
             Debug.LogError(
                 "Model Container não foi associado!"
             );
-            return;
+            return false;
         }
 
         if (viewer == null)
@@ -64,7 +68,7 @@ public class AnatomyModelLoader : MonoBehaviour
             Debug.LogError(
                 "AnatomyViewer não foi encontrado na cena!"
             );
-            return;
+            return false;
         }
 
         if (currentModel != null)
@@ -87,5 +91,7 @@ public class AnatomyModelLoader : MonoBehaviour
             "Modelo carregado e conectado ao visualizador: " +
             record.DisplayName
         );
+
+        return true;
     }
 }
